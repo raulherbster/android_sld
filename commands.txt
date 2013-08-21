@@ -1,0 +1,3 @@
+ARCH=arm CROSS_COMPILE=/home/raul/android_src/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi- make
+
+/home/raul/android_src/out/host/linux-x86/bin/emulator-arm -system ~/android_src/out/target/product/generic/system.img -kernel ~/android_kernel/goldfish/arch/arm/boot/kernel-qemu-armv7 -data ~/android_src/out/target/product/generic/userdata.img -ramdisk ~/android_src/out/target/product/generic/ramdisk.img -skindir ~/android_src/sdk/emulator/skins/ -skin HVGA -verbose -show-kernel
