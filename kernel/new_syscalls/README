@@ -1,0 +1,9 @@
+How to create new syscalls into Android platform?
+
+  - edit file kernel/include/linux/syscalls.h and add the prototype of the function
+    asmlinkage long sys_my_syscall(void);
+  - edit file kernel/arch/arm/include/asm/unistd.h and add the line
+    #define __NR_my_syscall (__NR_SYCALL_BASE + 20)
+  - edit file kernel/arch/arm/kernel/calls.S and expose the new syscalls in the syscall_table like
+    CALL(sys_my_syscall)
+
