@@ -1,0 +1,27 @@
+== Compiling native applications on Android ==
+
+For more information about Android Kernel compiling/running, please check
+documentation in our modified version of Android Kernel (Goldfish) 2.6.X.
+
+This file describe a bit about compiling native applications on Android,
+specially modules.
+
+For compiling native applications, you always have to cross-compile the 
+application to ARM, so that it can be run on any ARM-based system. See
+this tutorial (http://www.bekatul.info/content/native-c-application-android) 
+for more details about compiling Android C native applications.
+
+= Compiling =
+
+First, set your PATH variable to include the cross-compiler tools
+
+# export PATH=<android_src_code>/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/
+
+Than, compile the applications using the available Makefiles. In addition,
+you have to set CROSS_COMPILE and ARCH variables
+
+# CROSS_COMPILE=~/android_src/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi- ARCH=arm make
+
+= Running =
+Copy the output to the emulator/device using adb and run it normally.
+

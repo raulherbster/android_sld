@@ -1,0 +1,15 @@
+== Patch for ICS ==
+
+To compile ICS (and probably any new version of Android platform >= 4.0), you
+might have some problems with the compilation tools.
+
+* Follow the instructions described on http://source.android.com/source/building.html
+  * It also provides information about Android Kernel building.
+* Check which compiler best fits into the version of Android platform you are using.
+  * Usually, due to new features (for example, C++11 support on GCC/++ 4.7), it is
+    a bit more complicated to build it with new compilers. For example, for the ICS,
+    GCC/++ 4.6 works better than GCC/++ 4.7.
+* You may need some changes (see the patch changes_ics.patch) in order to compile it
+  properly. Again, depending on your compiler, you may apply more or less changes on
+  your code.
+* For ICS, GCC/++ 4.6 works better.

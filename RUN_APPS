@@ -1,2 +1,4 @@
+== Commands to push files into the <adb> emulator ==
+
 ~/android_src/out/host/linux-x86/bin/adb shell
 ~/android_src/out/host/linux-x86/bin/adb push $1 $2
