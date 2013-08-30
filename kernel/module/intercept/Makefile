@@ -3,6 +3,6 @@
 obj-m += intercept_module.o
 
 all:
-	make -C /home/raul/android_kernel/goldfish/ M=$(PWD) modules
+	make -C /home/raul/new/goldfish/ M=$(PWD) modules
 clean:
-	make -C /home/raul/android_kernel/goldfish/ M=$(PWD) clean
+	make -C /home/raul/new/goldfish/ M=$(PWD) clean
