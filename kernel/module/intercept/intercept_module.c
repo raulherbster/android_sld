@@ -23,6 +23,8 @@
 
 #include <linux/sched.h>
 
+#include <linux/crypto.h>
+
 MODULE_LICENSE ("Dual BSD/GPL");
 
 void __user *sample;
@@ -43,6 +45,14 @@ asmlinkage long (*original_call_open)();
 
 asmlinkage long (*original_call_close)();
 
+static void _encrypt_data(u8 *_orig_buf, u8 *encrypt_buf, size_t count);
+
+static void _decrypt_data(u8 *_orig_buf, u8 *decrypt_buf, size_t count);
+
+static void _set_cipher_key();
+
+static int _is_error(int code);
+
 /* Hooked sys_read() method definition */
 
 asmlinkage long our_sys_seal(void) {
@@ -60,45 +70,76 @@ asmlinkage long our_sys_seal(void) {
 asmlinkage long our_sys_is_sealed(void) {
 	printk("At our_sys_is_sealed\n");
 
+	_set_cipher_key();
+
 	return current->sealed;
 }
 
 asmlinkage long
 our_sys_read (unsigned int fd, char __user *buf, size_t count)
 {
-	printk ("At our_sys_read\n");
+	//printk ("At our_sys_read\n");
+	u8 *encrypt_buf = kmalloc(sizeof(u8) * count, GFP_KERNEL);
+	u8 *decrypt_buf = kmalloc(sizeof(u8) * count, GFP_KERNEL);
+	long function_return;
 
 	if (current->sealed) {
-		printk("Read data in safe mode");
-		return 0;
+		printk("Read data in safe mode >>>>>>>>>>>>>>>>>>>\n");
+		function_return = original_call_read(fd,encrypt_buf,count);
+		if (_is_error(function_return)) {
+			kfree(encrypt_buf);
+			kfree(decrypt_buf);
+			return function_return;
+		}
+		_decrypt_data(encrypt_buf,decrypt_buf,count);
+		if ( copy_to_user((void __user *)buf,decrypt_buf,count) ) {
+			kfree(encrypt_buf);
+			kfree(decrypt_buf);
+			return -EINVAL;
+		}
 	} else {
-		return original_call_read(fd,buf,count);
+		function_return = original_call_read(fd,buf,count);
 	}
 
-	return 0;
+	kfree(encrypt_buf);
+	kfree(decrypt_buf);
+	return function_return;
 }
 
 asmlinkage long
 our_sys_write (unsigned int fd, const char __user *buf, size_t count)
 {
-	printk ("At our_sys_write\n");
+	//printk ("At our_sys_write\n");
+	u8 *original_buf = kmalloc(sizeof(u8) * count, GFP_KERNEL);
+	u8 *encrypt_buf = kmalloc(sizeof(u8) * count, GFP_KERNEL);
+	long function_return;
 
 	if (current->sealed) {
-		printk("Write data in safe mode");
-		return 0;
+		printk("Write data in safe mode >>>>>>>>>>>>>>>>>>>\n");
+		if ( copy_from_user(original_buf,(void __user *)buf,count) ) {
+			kfree(encrypt_buf);
+			kfree(original_buf);
+			return -EINVAL;
+		}
+		_encrypt_data(original_buf,encrypt_buf,count);
+		function_return = original_call_write(fd,encrypt_buf,count);
 	} else {
-		return original_call_write(fd,buf,count);
+		function_return = original_call_write(fd,buf,count);
 	}
+
+	kfree(encrypt_buf);
+	kfree(original_buf);
+	return function_return;
 }
 
 asmlinkage long
 our_sys_open (const char __user *filename, int flags, int mode)
 {
-	printk ("At our_sys_open\n");
+	//printk ("At our_sys_open\n");
 
 	if (current->sealed) {
-		printk("Read data in safe mode");
-		return 0;
+		printk("Read data in safe mode >>>>>>>>>>>>>>>>>>>\n");
+		return original_call_open(filename,flags,mode);
 	} else {
 		return original_call_open(filename,flags,mode);
 	}
@@ -106,14 +147,34 @@ our_sys_open (const char __user *filename, int flags, int mode)
 }
 
 asmlinkage long our_sys_close(unsigned int fd) {
-	printk("At our_sys_close\n");
+	//printk("At our_sys_close\n");
 
 	if (current->sealed) {
-		printk("Read data in safe mode");
-		return 0;
+		printk("Read data in safe mode >>>>>>>>>>>>>>>>>>>\n");
+		return original_call_close(fd);
 	} else {
 		return original_call_close(fd);
 	}
+}
+
+static void _encrypt_data(u8 *_orig_buf, u8 *encrypt_buf, size_t count)
+{
+
+}
+
+static void _decrypt_data(u8 *_orig_buf, u8 *decrypt_buf, size_t count)
+{
+
+}
+
+static void _set_cipher_key() {
+	struct crypto_cipher *tfm;
+	tfm = crypto_alloc_cipher("aes", 4, CRYPTO_ALG_ASYNC);
+	// add into the map
+}
+
+static int _is_error(int code) {
+	return code < 0;
 }
 
 int init_module() {
