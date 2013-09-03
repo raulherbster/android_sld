@@ -25,6 +25,8 @@
 
 #include <linux/crypto.h>
 
+#define BLOCK_SIZE 32; //(32 Bytes)
+
 MODULE_LICENSE ("Dual BSD/GPL");
 
 void __user *sample;
@@ -49,9 +51,11 @@ static void _encrypt_data(u8 *_orig_buf, u8 *encrypt_buf, size_t count);
 
 static void _decrypt_data(u8 *_orig_buf, u8 *decrypt_buf, size_t count);
 
-static void _set_cipher_key();
+static void _set_cipher_key(u8 *pkey);
 
 static int _is_error(int code);
+
+struct crypto_cipher *tfm;
 
 /* Hooked sys_read() method definition */
 
@@ -68,9 +72,12 @@ asmlinkage long our_sys_seal(void) {
 /* Init module */
 
 asmlinkage long our_sys_is_sealed(void) {
+	u8 pkey[32] ={0xc1,0xb2,0x33,0x34,5,6,7,8,9,0xa,0xb,0xc,0xd,0xe,0xf,0x11,
+		        0xc3,0xb4,0x32,0x34,5,6,7,8,9,0xa,0xb,0xc1,0xd,0xe1,0xf2,0x12};
+
 	printk("At our_sys_is_sealed\n");
 
-	_set_cipher_key();
+	_set_cipher_key(pkey);
 
 	return current->sealed;
 }
@@ -79,9 +86,15 @@ asmlinkage long
 our_sys_read (unsigned int fd, char __user *buf, size_t count)
 {
 	//printk ("At our_sys_read\n");
+	long function_return;
 	u8 *encrypt_buf = kmalloc(sizeof(u8) * count, GFP_KERNEL);
 	u8 *decrypt_buf = kmalloc(sizeof(u8) * count, GFP_KERNEL);
-	long function_return;
+
+	if (!encrypt_buf)
+	    return -ENOMEM;
+
+	if (!decrypt_buf)
+	    return -ENOMEM;
 
 	if (current->sealed) {
 		printk("Read data in safe mode >>>>>>>>>>>>>>>>>>>\n");
@@ -110,9 +123,15 @@ asmlinkage long
 our_sys_write (unsigned int fd, const char __user *buf, size_t count)
 {
 	//printk ("At our_sys_write\n");
+	long function_return;
 	u8 *original_buf = kmalloc(sizeof(u8) * count, GFP_KERNEL);
 	u8 *encrypt_buf = kmalloc(sizeof(u8) * count, GFP_KERNEL);
-	long function_return;
+
+	if (!original_buf)
+	    return -ENOMEM;
+
+	if (!encrypt_buf)
+	    return -ENOMEM;
 
 	if (current->sealed) {
 		printk("Write data in safe mode >>>>>>>>>>>>>>>>>>>\n");
@@ -157,19 +176,21 @@ asmlinkage long our_sys_close(unsigned int fd) {
 	}
 }
 
-static void _encrypt_data(u8 *_orig_buf, u8 *encrypt_buf, size_t count)
+static void _encrypt_data(u8 *_orig_buf, u8 *_encrypt_buf, size_t count)
 {
-
+	//iterate over the buffers and encrypt blocks of 32 bytes
+	crypto_cipher_encrypt_one(tfm,_encrypt_buf,_orig_buf);
 }
 
-static void _decrypt_data(u8 *_orig_buf, u8 *decrypt_buf, size_t count)
+static void _decrypt_data(u8 *_orig_buf, u8 *_decrypt_buf, size_t count)
 {
-
+	//iterate over the buffers and decrypt blocks of 32 bytes
+	crypto_cipher_decrypt_one(tfm,_decrypt_buf,_orig_buf);
 }
 
-static void _set_cipher_key() {
-	struct crypto_cipher *tfm;
+static void _set_cipher_key(u8 *pkey) {
 	tfm = crypto_alloc_cipher("aes", 4, CRYPTO_ALG_ASYNC);
+	crypto_cipher_setkey(tfm, pkey, 32);
 	// add into the map
 }
 
